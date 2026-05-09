@@ -205,6 +205,11 @@ function loginMsg(message, type='warn'){
   $('loginMsg').className = 'notice ' + type;
 }
 function isAdmin(){ return profile && profile.rol === 'admin'; }
+function currentHemodinamistaId(){
+  if(!profile) return null;
+  const linked = doctors.find(d => d.usuario_app_id === profile.id || (profile.email && d.email === profile.email));
+  return linked?.id || null;
+}
 function docById(id){ return doctors.find(d => d.id === id) || null; }
 function docName(id){ return docById(id)?.nombre || ''; }
 function activeDocs(){ return doctors.filter(d => d.activo); }
@@ -301,8 +306,12 @@ async function loadProfile(){
   $('profileInfo').textContent = `${profile.email || sessionUser.email} · rol: ${profile.rol}`;
 
   const admin = isAdmin();
-  ['saveCycleBtn','addDocBtn','addTboBtn'].forEach(id => $(id).disabled = !admin);
+  ['saveCycleBtn','addDocBtn'].forEach(id => $(id).disabled = !admin);
+  $('addTboBtn').disabled = false;
   if(!admin) $('changeType').querySelector('option[value="correccion_administrativa"]').disabled = true;
+  // Los no admin pueden cargar sus propias guardias de Tacuarembó y proponer cambios.
+  $('addTboBtn').disabled = false;
+  $('addChangeBtn').disabled = false;
   log('Perfil cargado: ' + profile.nombre + ' / rol ' + profile.rol, admin ? 'ok' : 'warn');
 }
 
@@ -406,7 +415,10 @@ async function updateFixed(dayN, role, value){
 window.updateFixed = updateFixed;
 
 async function addTbo(){
-  if(!isAdmin()) return alert('Solo admin.');
+  // Admin puede cargar Tacuarembó para cualquiera.
+  // Hemodinamista no admin solo puede cargar su propia guardia si está vinculado a un hemodinamista.
+  const selectedDoctor = $('tboDoc').value;
+  if(!isAdmin() && selectedDoctor !== currentHemodinamistaId()) return alert('Solo podés cargar tus propias guardias de Tacuarembó.');
   const fecha_desde = $('tboFrom').value;
   const fecha_hasta = $('tboTo').value || fecha_desde;
   const hemodinamista_id = $('tboDoc').value;
@@ -435,12 +447,34 @@ async function addChange(){
   if(sale && sale === entra) return alert('Sale y entra no pueden ser la misma persona.');
   if(tipo === 'permuta' && !fecha_devolucion) return alert('Para permuta indicá fecha de devolución.');
 
+  // Seguridad funcional para usuarios no admin:
+  // 1) Pueden proponer cambios donde ellos salen o entran.
+  // 2) No pueden crear correcciones administrativas.
+  // 3) Las propuestas quedan pendientes hasta aceptación.
+  const myHemo = currentHemodinamistaId();
+  if(!isAdmin()){
+    if(!myHemo) return alert('Tu usuario no está vinculado a una ficha de hemodinamista. Pedí al administrador que te vincule.');
+    if(sale !== myHemo && entra !== myHemo){
+      return alert('Solo podés proponer cambios en los que vos salís o entrás.');
+    }
+  }
+
   const payload = {
     tipo,
-    estado: tipo === 'correccion_administrativa' && isAdmin() ? 'aplicado' : 'pendiente',
-    fecha,
-    sede,
-    rol,
+    estado: tipo === 'correasync function setChangeStatus(id, estado){
+  const change = changes.find(c => c.id === id);
+  if(!change) return alert('No encuentro ese cambio.');
+
+  // Admin puede aceptar/rechazar cualquier cambio.
+  // Hemodinamista no admin solo puede aceptar/rechazar si es el afectado:
+  // - sustitución: quien entra debe aceptar, o quien sale si la propuesta la hizo el entrante.
+  // - permuta: ambos están afectados; se permite aceptar si el usuario es sale o entra.
+  if(!isAdmin()){
+    const myHemo = currentHemodinamistaId();
+    if(!myHemo) return alert('Tu usuario no está vinculado a una ficha de hemodinamista.');
+    const involved = [change.sale_hemodinamista_id, change.entra_hemodinamista_id].includes(myHemo);
+    if(!involved) return alert('Solo podés aceptar o rechazar cambios en los que estás involucrado.');
+  }ol,
     sale_hemodinamista_id:sale,
     entra_hemodinamista_id:entra,
     fecha_devolucion,
@@ -493,7 +527,13 @@ function render(){
 }
 
 function renderSelects(){
-  $('tboDoc').innerHTML = doctorOptions($('tboDoc').value, false, 'any', true);
+  const myHemo = currentHemodinamistaId();
+  const tboSelected = $('tboDoc').value || (!isAdmin() ? myHemo : '');
+  $('tboDoc').innerHTML = doctorOptions(tboSelected, false, 'any', true);
+  if(!isAdmin() && myHemo) $('tboDoc').value = myHemo;
+  if(!isAdmin()) $('tboDoc').disabled = true;
+  else $('tboDoc').disabled = false;
+
   $('changeFrom').innerHTML = doctorOptions($('changeFrom').value, true, 'any', true);
   $('changeTo').innerHTML = doctorOptions($('changeTo').value, false, 'any', true);
 }
@@ -629,16 +669,22 @@ function renderTbo(){
 }
 
 function renderChanges(){
-  $('changesTable').innerHTML = changes.length ? `<table><thead><tr><th>Fecha</th><th>Tipo</th><th>Sede</th><th>Rol</th><th>Sale</th><th>Entra</th><th>Estado</th><th>Motivo</th><th></th></tr></thead><tbody>${changes.map(c=>`<tr><td>${c.fecha}${c.fecha_devolucion?'<br><span class="small">Devuelve: '+c.fecha_devolucion+'</span>':''}</td><td>${typeLabel(c.tipo)}</td><td>${siteLabel(c.sede)}</td><td>${roleLabel(c.rol)}</td><td>${html(docName(c.sale_hemodinamista_id)||'—')}</td><td>${html(docName(c.entra_hemodinamista_id))}</td><td><span class="pill ${statusClass(c.estado)}">${html(c.estado)}</span></td><td>${html(c.motivo||'')}</td><td>${isAdmin()?changeButtons(c):''}</td></tr>`).join('')}</tbody></table>` : '<div class="notice warn">No hay cambios registrados.</div>';
+  $('changesTable').innerHTML = changes.length ? `<table><thead><tr><th>Fecha</th><th>Tipo</th><th>Sede</th><th>Rol</th><th>Sale</th><th>Entra</th><th>Estado</th><th>Motivo</th><th></th></tr></thead><tbody>${changes.map(c=>`<tr><td>${c.fecha}${c.fecha_devolucion?'<br><span class="small">Devuelve: '+c.fecha_devolucion+'</span>':''}</td><td>${typeLabel(c.tipo)}</td><td>${siteLabel(c.sede)}</td><td>${roleLabel(c.rol)}</td><td>${html(docName(c.sale_hemodinamista_id)||'—')}</td><td>${html(docName(c.entra_hemodinamista_id))}</td><td><span class="pill ${statusClass(c.estado)}">${html(c.estado)}</span></td><td>${html(c.motivo||'')}</td><td>${changeButtons(c)}</td></tr>`).join('')}</tbody></table>` : '<div class="notice warn">No hay cambios registrados.</div>';
 }
 
-function changeButtons(c){
-  if(c.estado === 'pendiente') return `<button type="button" onclick="setChangeStatus('${c.id}','aceptado')">Aceptar</button> <button type="button" onclick="setChangeStatus('${c.id}','rechazado')">Rechazar</button>`;
-  if(c.estado === 'aceptado') return `<button type="button" onclick="setChangeStatus('${c.id}','aplicado')">Marcar aplicado</button>`;
+function chanfunction changeButtons(c){
+  if(c.estado !== 'pendiente' && !(c.estado === 'aceptado' && isAdmin())) return '';
+
+  const myHemo = currentHemodinamistaId();
+  const involved = myHemo && [c.sale_hemodinamista_id, c.entra_hemodinamista_id].includes(myHemo);
+  const canDecide = isAdmin() || involved;
+
+  if(c.estado === 'pendiente' && canDecide) {
+    return `<button type="button" onclick="setChangeStatus('${c.id}','aceptado')">Aceptar</button> <button type="button" onclick="setChangeStatus('${c.id}','rechazado')">Rechazar</button>`;
+  }
+  if(c.estado === 'aceptado' && isAdmin()) return `<button type="button" onclick="setChangeStatus('${c.id}','aplicado')">Marcar aplicado</button>`;
   return '';
-}
-
-function renderReport(){
+}nderReport(){
   const counts = {};
   doctors.forEach(d => counts[d.nombre] = {mvWeek1:0,mvFds1:0,mv2:0,tbo1:0,tbo2:0});
   const ensure = n => { if(!counts[n]) counts[n] = {mvWeek1:0,mvFds1:0,mv2:0,tbo1:0,tbo2:0}; };
