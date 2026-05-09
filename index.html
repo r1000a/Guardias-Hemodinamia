@@ -1,0 +1,690 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Guardias Hemodinamia HC - V4 completa</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    :root{
+      --bg:#f4f7fb;--card:#fff;--ink:#1f2937;--muted:#6b7280;--primary:#0f766e;--primary-dark:#115e59;
+      --danger:#b91c1c;--warn:#b45309;--ok:#166534;--border:#d1d5db;
+      --danger-bg:#fee2e2;--warn-bg:#fef3c7;--ok-bg:#dcfce7;--info-bg:#ecfeff;--soft:#f9fafb;
+      --shadow:0 12px 30px rgba(15,23,42,.08)
+    }
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+    header{padding:24px 32px;background:linear-gradient(135deg,#0f766e,#164e63);color:white}
+    header h1{margin:0 0 6px;font-size:28px} header p{margin:0;opacity:.92}
+    main{max-width:1540px;margin:0 auto;padding:22px}
+    .card{background:var(--card);border:1px solid rgba(209,213,219,.75);box-shadow:var(--shadow);border-radius:18px;padding:18px;margin-bottom:16px}
+    .grid{display:grid;grid-template-columns:430px 1fr;gap:18px;align-items:start}
+    @media(max-width:1050px){.grid{grid-template-columns:1fr}}
+    h2{margin:0 0 14px;font-size:20px} h3{margin:18px 0 10px;font-size:15px;color:#374151}
+    label{display:block;margin-bottom:5px;color:var(--muted);font-size:13px}
+    input,select,textarea,button{font:inherit}
+    input,select,textarea{width:100%;border:1px solid var(--border);border-radius:10px;padding:9px 10px;background:white;color:var(--ink)}
+    textarea{min-height:72px;resize:vertical}
+    button{border:0;border-radius:11px;padding:9px 12px;cursor:pointer;font-weight:700;background:#e5e7eb;color:#111827}
+    button.primary{background:var(--primary);color:white} button.primary:hover{background:var(--primary-dark)}
+    button.danger{background:var(--danger);color:white} button.ghost{background:white;border:1px solid var(--border)} button.warn{background:var(--warn);color:white}
+    button:disabled{opacity:.45;cursor:not-allowed}
+    .row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}.row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:10px}
+    @media(max-width:720px){.row,.row3{grid-template-columns:1fr}}
+    .btns{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}.hidden{display:none!important}.small{font-size:12px;color:var(--muted)}
+    .notice{border-radius:14px;padding:12px;margin:10px 0;border:1px solid var(--border);background:var(--soft);white-space:pre-wrap}
+    .notice.ok{background:var(--ok-bg);border-color:#bbf7d0;color:#14532d}.notice.warn{background:var(--warn-bg);border-color:#fde68a;color:#78350f}.notice.danger{background:var(--danger-bg);border-color:#fecaca;color:#7f1d1d}
+    .topbar{display:flex;justify-content:space-between;gap:12px;align-items:center}.tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}.tab.active{background:var(--primary);color:white}
+    table{width:100%;border-collapse:separate;border-spacing:0;border:1px solid var(--border);border-radius:14px;overflow:hidden;background:white}
+    th,td{padding:9px;border-bottom:1px solid #e5e7eb;vertical-align:top;font-size:13px}th{background:#f9fafb;text-align:left;color:#374151;font-size:12px;text-transform:uppercase;letter-spacing:.03em}tr:last-child td{border-bottom:0}
+    .calendar{display:grid;grid-template-columns:repeat(7,1fr);gap:8px}@media(max-width:1100px){.calendar{grid-template-columns:repeat(2,1fr)}}
+    .day{min-height:132px;border:1px solid var(--border);border-radius:14px;padding:9px;background:white}.day.weekend{background:#f8fafc}.day.conflict{border-color:#fca5a5;background:#fff7f7}.day.blank{opacity:.35}
+    .daynum{display:flex;justify-content:space-between;align-items:center;font-weight:800;font-size:14px;margin-bottom:6px}.asg{font-size:12px;border-radius:10px;padding:6px;margin-top:5px;background:#f3f4f6}.asg strong{display:block}.mv{background:var(--info-bg)}.tbo{background:#fefce8}.bad{background:var(--danger-bg)!important;color:#7f1d1d}
+    .metricbar{display:grid;grid-template-columns:repeat(4,minmax(100px,1fr));gap:10px;margin-bottom:14px}.metric{background:#f9fafb;border:1px solid #e5e7eb;border-radius:14px;padding:12px}.metric strong{display:block;font-size:22px}.metric span{font-size:12px;color:var(--muted)}
+    .pill{display:inline-flex;align-items:center;border-radius:999px;padding:3px 8px;font-size:12px;font-weight:800}.pill.ok{background:var(--ok-bg);color:var(--ok)}.pill.warn{background:var(--warn-bg);color:var(--warn)}.pill.bad{background:var(--danger-bg);color:var(--danger)}.pill.info{background:#ccfbf1;color:var(--primary)}
+    .section-divider{border-top:1px dashed #d1d5db;margin-top:18px;padding-top:12px}
+    @media print{@page{size:A4 landscape;margin:8mm}header,#login,#userbar,#debug,.left,.tabs,.no-print{display:none!important}main{padding:0;max-width:none}.grid{display:block}.card{box-shadow:none;border:0;padding:0;margin:0}.calendar{grid-template-columns:repeat(7,1fr);gap:3px}.day{min-height:72px;padding:4px;border-radius:6px;overflow:hidden}.daynum{font-size:9px}.asg{font-size:7.5px;line-height:1.12;padding:2px 3px;margin-top:2px}.metricbar,#alerts{display:none!important}}
+  </style>
+</head>
+<body>
+<header>
+  <h1>Guardias de Hemodinamia</h1>
+  <p>Hospital de Clínicas · V4 completa para testeo · Montevideo / Tacuarembó / cambios / reporte / auditoría</p>
+</header>
+
+<main>
+  <section id="login" class="card">
+    <h2>Ingreso</h2>
+    <div class="row">
+      <div><label>Email</label><input id="email" type="email" value="r1000a@gmail.com" autocomplete="email"></div>
+      <div><label>Contraseña</label><input id="password" type="password" autocomplete="current-password"></div>
+    </div>
+    <div class="btns">
+      <button id="loginBtn" class="primary" type="button">Entrar</button>
+      <button id="signupBtn" type="button">Crear cuenta</button>
+      <button id="testBtn" type="button">Probar conexión</button>
+    </div>
+    <div id="loginMsg" class="notice warn">Esperando ingreso.</div>
+  </section>
+
+  <section id="app" class="hidden">
+    <div id="userbar" class="card topbar no-print">
+      <div><strong id="profileName">Usuario</strong><br><span id="profileInfo" class="small"></span></div>
+      <div class="btns"><button id="reloadBtn" type="button">Recargar</button><button id="logoutBtn" class="ghost" type="button">Salir</button></div>
+    </div>
+    <div id="debug" class="notice warn no-print">Estado: app iniciada.</div>
+
+    <div class="grid">
+      <aside class="left card">
+        <h2>Administración</h2>
+        <div class="row">
+          <div><label>Mes</label><input id="month" type="month"></div>
+          <div><label>Inicio ciclo FDS</label><input id="cycleStart" type="date"></div>
+        </div>
+        <div class="btns"><button id="saveCycleBtn" class="primary" type="button">Guardar ciclo</button></div>
+        <p class="small">La rotación de fin de semana se calcula por el orden de las guardias fijas: lunes, martes, miércoles, jueves, viernes.</p>
+
+        <h3>Agregar hemodinamista</h3>
+        <div class="row">
+          <div><label>Nombre</label><input id="docName" placeholder="Nombre y apellido"></div>
+          <div><label>Email</label><input id="docEmail" placeholder="opcional"></div>
+        </div>
+        <div class="row3">
+          <label style="color:var(--ink)"><input id="docFirst" type="checkbox" checked style="width:auto"> 1º operador</label>
+          <label style="color:var(--ink)"><input id="docSecond" type="checkbox" checked style="width:auto"> 2º operador</label>
+          <label style="color:var(--ink)"><input id="docSub" type="checkbox" style="width:auto"> suplente sin fija</label>
+        </div>
+        <div class="btns"><button id="addDocBtn" class="primary" type="button">Agregar hemodinamista</button></div>
+        <div id="addDocMsg" class="small"></div>
+
+        <h3>Guardias fijas Montevideo</h3>
+        <div id="fixedBox"></div>
+
+        <h3>Tacuarembó</h3>
+        <div class="row">
+          <div><label>Desde</label><input id="tboFrom" type="date"></div>
+          <div><label>Hasta</label><input id="tboTo" type="date"></div>
+        </div>
+        <div class="row">
+          <div><label>Hemodinamista</label><select id="tboDoc"></select></div>
+          <div><label>Rol</label><select id="tboRole"><option value="primer_operador">Primer operador</option><option value="segundo_operador">Segundo operador</option></select></div>
+        </div>
+        <label>Observación</label><input id="tboNote" placeholder="opcional">
+        <div class="btns"><button id="addTboBtn" class="primary" type="button">Agregar Tacuarembó</button></div>
+
+        <div class="section-divider">
+          <h3>Registrar cambio</h3>
+          <div class="row">
+            <div><label>Tipo</label><select id="changeType"><option value="sustitucion">Sustitución</option><option value="permuta">Permuta</option><option value="correccion_administrativa">Corrección administrativa</option></select></div>
+            <div><label>Fecha</label><input id="changeDate" type="date"></div>
+          </div>
+          <div class="row">
+            <div><label>Sede</label><select id="changeSite"><option value="montevideo">Montevideo</option><option value="tacuarembo">Tacuarembó</option></select></div>
+            <div><label>Rol</label><select id="changeRole"><option value="primer_operador">Primer operador</option><option value="segundo_operador">Segundo operador</option></select></div>
+          </div>
+          <div class="row">
+            <div><label>Sale</label><select id="changeFrom"></select></div>
+            <div><label>Entra</label><select id="changeTo"></select></div>
+          </div>
+          <div class="row">
+            <div><label>Fecha devolución si permuta</label><input id="changeReturnDate" type="date"></div>
+            <div><label>Sede devolución</label><select id="changeReturnSite"><option value="montevideo">Montevideo</option><option value="tacuarembo">Tacuarembó</option></select></div>
+          </div>
+          <label>Motivo / observación</label><textarea id="changeReason"></textarea>
+          <div class="btns"><button id="addChangeBtn" class="primary" type="button">Registrar cambio</button></div>
+          <p class="small">Las sustituciones/permutas quedan pendientes hasta aceptación. Las correcciones administrativas del admin se aplican directo.</p>
+        </div>
+      </aside>
+
+      <section class="card">
+        <div class="tabs no-print">
+          <button id="showCalendarBtn" class="tab active" type="button">Calendario</button>
+          <button id="showDoctorsBtn" class="tab" type="button">Hemodinamistas</button>
+          <button id="showTboBtn" class="tab" type="button">Tacuarembó</button>
+          <button id="showChangesBtn" class="tab" type="button">Cambios</button>
+          <button id="showReportBtn" class="tab" type="button">Reporte pagos</button>
+          <button id="showAuditBtn" class="tab" type="button">Auditoría</button>
+          <button id="printBtn" type="button">Imprimir/PDF</button>
+          <button id="csvBtn" type="button">CSV pagos</button>
+        </div>
+        <h2 id="title">Calendario mensual</h2>
+        <div id="metrics" class="metricbar"></div>
+        <div id="alerts"></div>
+
+        <div id="viewCalendar"><div id="calendar" class="calendar"></div></div>
+        <div id="viewDoctors" class="hidden"><h3>Hemodinamistas</h3><div id="doctorsTable"></div></div>
+        <div id="viewTbo" class="hidden"><h3>Guardias de Tacuarembó</h3><div id="tboTable"></div></div>
+        <div id="viewChanges" class="hidden"><h3>Cambios registrados</h3><div id="changesTable"></div></div>
+        <div id="viewReport" class="hidden"><h3>Reporte mensual separado por sede</h3><div id="reportTable"></div></div>
+        <div id="viewAudit" class="hidden"><h3>Auditoría</h3><p class="small">Últimos registros automáticos disponibles para admin.</p><div id="auditTable"></div></div>
+      </section>
+    </div>
+  </section>
+</main>
+
+<script>
+'use strict';
+
+const SUPABASE_URL = 'https://vbuyncanarvdypktdowt.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_u4TgW4MwJPYDgMBgZ-M8Xg_7lTU5JLz';
+const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+const weekdays = [
+  {n:1,label:'Lunes'}, {n:2,label:'Martes'}, {n:3,label:'Miércoles'}, {n:4,label:'Jueves'}, {n:5,label:'Viernes'}
+];
+
+let sessionUser = null;
+let profile = null;
+let doctors = [];
+let fixed = [];
+let config = null;
+let tbo = [];
+let changes = [];
+let audit = [];
+let schedule = [];
+let conflicts = [];
+let currentView = 'calendar';
+
+const $ = id => document.getElementById(id);
+const html = v => String(v ?? '').replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
+const todayISO = d => new Date(d.getTime() - d.getTimezoneOffset()*60000).toISOString().slice(0,10);
+const dayName = n => ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'][n];
+const roleLabel = r => ({primer_operador:'Primer operador',segundo_operador:'Segundo operador'}[r] || r);
+const siteLabel = s => ({montevideo:'Montevideo',tacuarembo:'Tacuarembó'}[s] || s);
+const typeLabel = t => ({sustitucion:'Sustitución',permuta:'Permuta',correccion_administrativa:'Corrección administrativa'}[t] || t);
+const mod = (n,m) => ((n%m)+m)%m;
+const csv = v => '"' + String(v ?? '').replaceAll('"','""') + '"';
+
+function log(message, type='warn'){
+  const box = $('debug');
+  if(box){ box.textContent = 'Estado: ' + message; box.className = 'notice ' + type + ' no-print'; }
+  console.log('[guardias-v4]', message);
+}
+function loginMsg(message, type='warn'){
+  $('loginMsg').textContent = message;
+  $('loginMsg').className = 'notice ' + type;
+}
+function isAdmin(){ return profile && profile.rol === 'admin'; }
+function docById(id){ return doctors.find(d => d.id === id) || null; }
+function docName(id){ return docById(id)?.nombre || ''; }
+function activeDocs(){ return doctors.filter(d => d.activo); }
+function statusClass(status){ return status === 'pendiente' ? 'warn' : status === 'rechazado' || status === 'cancelado' ? 'bad' : 'ok'; }
+function showAdminButtons(){ return isAdmin(); }
+
+window.addEventListener('DOMContentLoaded', () => {
+  $('month').value = new Date().toISOString().slice(0,7);
+
+  $('loginBtn').addEventListener('click', login);
+  $('signupBtn').addEventListener('click', signup);
+  $('testBtn').addEventListener('click', testConnection);
+  $('logoutBtn').addEventListener('click', logout);
+  $('reloadBtn').addEventListener('click', loadEverything);
+  $('saveCycleBtn').addEventListener('click', saveCycle);
+  $('addDocBtn').addEventListener('click', addDoctor);
+  $('addTboBtn').addEventListener('click', addTbo);
+  $('addChangeBtn').addEventListener('click', addChange);
+  $('month').addEventListener('change', render);
+  $('printBtn').addEventListener('click', () => window.print());
+  $('csvBtn').addEventListener('click', exportPaymentsCsv);
+
+  $('showCalendarBtn').addEventListener('click', () => showView('calendar'));
+  $('showDoctorsBtn').addEventListener('click', () => showView('doctors'));
+  $('showTboBtn').addEventListener('click', () => showView('tbo'));
+  $('showChangesBtn').addEventListener('click', () => showView('changes'));
+  $('showReportBtn').addEventListener('click', () => showView('report'));
+  $('showAuditBtn').addEventListener('click', () => showView('audit'));
+
+  db.auth.getSession().then(({data}) => {
+    if(data?.session) startApp();
+  });
+});
+
+async function testConnection(){
+  loginMsg('Probando conexión...', 'warn');
+  const res = await db.from('hemodinamistas').select('id,nombre').limit(1);
+  if(res.error) loginMsg('Error conexión/lectura: ' + res.error.message, 'danger');
+  else loginMsg('Conexión OK. Filas leídas: ' + (res.data?.length || 0), 'ok');
+}
+
+async function login(){
+  try{
+    loginMsg('Ingresando...', 'warn');
+    const email = $('email').value.trim();
+    const password = $('password').value;
+    if(!email || !password){ loginMsg('Ingresá email y contraseña.', 'danger'); return; }
+    const res = await db.auth.signInWithPassword({email, password});
+    if(res.error){ loginMsg('Error login: ' + res.error.message, 'danger'); return; }
+    sessionUser = res.data.user;
+    loginMsg('Ingreso correcto.', 'ok');
+    await startApp();
+  }catch(err){ loginMsg('Error inesperado: ' + err.message, 'danger'); console.error(err); }
+}
+
+async function signup(){
+  try{
+    loginMsg('Creando cuenta...', 'warn');
+    const email = $('email').value.trim();
+    const password = $('password').value;
+    if(!email || !password){ loginMsg('Ingresá email y contraseña.', 'danger'); return; }
+    const res = await db.auth.signUp({email, password});
+    if(res.error){ loginMsg('Error creando cuenta: ' + res.error.message, 'danger'); return; }
+    loginMsg('Cuenta creada. UID: ' + (res.data?.user?.id || 'no disponible') + '. Vincular en usuarios_app.', 'ok');
+  }catch(err){ loginMsg('Error inesperado: ' + err.message, 'danger'); console.error(err); }
+}
+
+async function logout(){
+  await db.auth.signOut();
+  location.reload();
+}
+
+async function startApp(){
+  $('login').classList.add('hidden');
+  $('app').classList.remove('hidden');
+  await loadProfile();
+  await loadEverything();
+}
+
+async function loadProfile(){
+  log('Leyendo usuario autenticado...');
+  const u = await db.auth.getUser();
+  if(u.error) throw new Error(u.error.message);
+  sessionUser = u.data.user;
+  if(!sessionUser) throw new Error('No hay usuario autenticado.');
+
+  log('Leyendo usuarios_app...');
+  const res = await db.from('usuarios_app').select('*').eq('auth_user_id', sessionUser.id).eq('activo', true).maybeSingle();
+  if(res.error) throw new Error('usuarios_app: ' + res.error.message);
+  if(!res.data) throw new Error('Usuario autenticado, pero no vinculado en usuarios_app. UID: ' + sessionUser.id);
+  profile = res.data;
+
+  $('profileName').textContent = profile.nombre;
+  $('profileInfo').textContent = `${profile.email || sessionUser.email} · rol: ${profile.rol}`;
+
+  const admin = isAdmin();
+  ['saveCycleBtn','addDocBtn','addTboBtn'].forEach(id => $(id).disabled = !admin);
+  if(!admin) $('changeType').querySelector('option[value="correccion_administrativa"]').disabled = true;
+  log('Perfil cargado: ' + profile.nombre + ' / rol ' + profile.rol, admin ? 'ok' : 'warn');
+}
+
+async function loadEverything(){
+  try{
+    log('Cargando hemodinamistas...');
+    let res = await db.from('hemodinamistas').select('*').order('nombre');
+    if(res.error) throw new Error('hemodinamistas: ' + res.error.message);
+    doctors = res.data || [];
+
+    log('Cargando guardias fijas...');
+    res = await db.from('guardias_fijas_montevideo').select('*').eq('activo', true).order('numero_guardia');
+    if(res.error) throw new Error('guardias_fijas_montevideo: ' + res.error.message);
+    fixed = res.data || [];
+
+    log('Cargando configuración...');
+    res = await db.from('configuracion_guardias').select('*').eq('activo', true).order('created_at', {ascending:false}).limit(1).maybeSingle();
+    if(res.error) throw new Error('configuracion_guardias: ' + res.error.message);
+    config = res.data;
+    if(config?.fecha_inicio_ciclo_fds) $('cycleStart').value = config.fecha_inicio_ciclo_fds;
+
+    log('Cargando Tacuarembó...');
+    res = await db.from('guardias_tacuarembo').select('*').eq('activo', true).order('fecha_desde');
+    if(res.error) throw new Error('guardias_tacuarembo: ' + res.error.message);
+    tbo = res.data || [];
+
+    log('Cargando cambios...');
+    res = await db.from('cambios_guardia').select('*').order('created_at', {ascending:false});
+    if(res.error) throw new Error('cambios_guardia: ' + res.error.message);
+    changes = res.data || [];
+
+    audit = [];
+    if(isAdmin()){
+      log('Cargando auditoría...');
+      const aud = await db.from('audit_log').select('*').order('created_at', {ascending:false}).limit(80);
+      if(!aud.error) audit = aud.data || [];
+    }
+
+    render();
+    log(`Datos cargados: ${doctors.length} hemodinamistas, ${fixed.length} guardias fijas, ${tbo.length} TBO, ${changes.length} cambios.`, 'ok');
+  }catch(err){ log(err.message, 'danger'); alert(err.message); console.error(err); }
+}
+
+function doctorOptions(selected='', allowEmpty=true, role='any', includeSubs=true){
+  let out = allowEmpty ? '<option value="">— vacío —</option>' : '<option value="">— seleccionar —</option>';
+  activeDocs().filter(d => includeSubs || !d.suplente_sin_guardia_fija).filter(d => {
+    if(role === 'first') return d.puede_ser_primer_operador;
+    if(role === 'second') return d.puede_ser_segundo_operador;
+    return true;
+  }).forEach(d => {
+    out += `<option value="${d.id}" ${d.id===selected?'selected':''}>${html(d.nombre)}${d.suplente_sin_guardia_fija?' · suplente':''}</option>`;
+  });
+  return out;
+}
+
+async function addDoctor(){
+  try{
+    $('addDocMsg').textContent = 'Agregando...';
+    if(!isAdmin()){ $('addDocMsg').textContent = 'No sos admin.'; return; }
+    const nombre = $('docName').value.trim();
+    const email = $('docEmail').value.trim() || null;
+    if(!nombre){ $('addDocMsg').textContent = 'Falta nombre.'; return; }
+    const payload = {
+      nombre,
+      email,
+      activo:true,
+      puede_ser_primer_operador:$('docFirst').checked,
+      puede_ser_segundo_operador:$('docSecond').checked,
+      suplente_sin_guardia_fija:$('docSub').checked
+    };
+    const res = await db.from('hemodinamistas').insert(payload).select('id,nombre').single();
+    if(res.error){ $('addDocMsg').textContent = 'Error: ' + res.error.message; return; }
+    $('addDocMsg').textContent = 'Agregado: ' + res.data.nombre;
+    $('docName').value = ''; $('docEmail').value = ''; $('docFirst').checked = true; $('docSecond').checked = true; $('docSub').checked = false;
+    await loadEverything();
+    showView('doctors');
+  }catch(err){ $('addDocMsg').textContent = 'Error inesperado: ' + err.message; console.error(err); }
+}
+
+async function saveCycle(){
+  if(!isAdmin()) return alert('Solo admin.');
+  const date = $('cycleStart').value;
+  if(!date) return alert('Indicá inicio de ciclo.');
+  let res;
+  if(config?.id) res = await db.from('configuracion_guardias').update({fecha_inicio_ciclo_fds:date}).eq('id', config.id);
+  else res = await db.from('configuracion_guardias').insert({nombre:'Configuración principal',fecha_inicio_ciclo_fds:date,activo:true,created_by:profile.id});
+  if(res.error) return alert(res.error.message);
+  await loadEverything();
+}
+
+async function updateFixed(dayN, role, value){
+  if(!isAdmin()) return;
+  const row = fixed.find(x => x.dia_semana === dayN);
+  if(!row) return alert('No existe guardia fija para ese día.');
+  if(role === 'first' && !value) return alert('El primer operador no puede quedar vacío.');
+  const patch = role === 'first' ? {primer_operador_id:value} : {segundo_operador_id:value || null};
+  const res = await db.from('guardias_fijas_montevideo').update(patch).eq('id', row.id);
+  if(res.error) return alert(res.error.message);
+  await loadEverything();
+}
+window.updateFixed = updateFixed;
+
+async function addTbo(){
+  if(!isAdmin()) return alert('Solo admin.');
+  const fecha_desde = $('tboFrom').value;
+  const fecha_hasta = $('tboTo').value || fecha_desde;
+  const hemodinamista_id = $('tboDoc').value;
+  const rol = $('tboRole').value;
+  const observacion = $('tboNote').value.trim() || null;
+  if(!fecha_desde || !fecha_hasta || !hemodinamista_id) return alert('Completá fechas y hemodinamista.');
+  if(fecha_hasta < fecha_desde) return alert('Hasta no puede ser anterior a Desde.');
+  const res = await db.from('guardias_tacuarembo').insert({fecha_desde,fecha_hasta,hemodinamista_id,rol,observacion,activo:true,created_by:profile.id});
+  if(res.error) return alert(res.error.message);
+  $('tboFrom').value=''; $('tboTo').value=''; $('tboNote').value='';
+  await loadEverything(); showView('tbo');
+}
+
+async function addChange(){
+  const tipo = $('changeType').value;
+  if(tipo === 'correccion_administrativa' && !isAdmin()) return alert('Solo admin puede registrar corrección administrativa.');
+  const fecha = $('changeDate').value;
+  const sede = $('changeSite').value;
+  const rol = $('changeRole').value;
+  const sale = $('changeFrom').value || null;
+  const entra = $('changeTo').value;
+  const fecha_devolucion = $('changeReturnDate').value || null;
+  const sede_devolucion = $('changeReturnSite').value || null;
+  const motivo = $('changeReason').value.trim() || null;
+  if(!fecha || !entra) return alert('Completá fecha y hemodinamista entrante.');
+  if(sale && sale === entra) return alert('Sale y entra no pueden ser la misma persona.');
+  if(tipo === 'permuta' && !fecha_devolucion) return alert('Para permuta indicá fecha de devolución.');
+
+  const payload = {
+    tipo,
+    estado: tipo === 'correccion_administrativa' && isAdmin() ? 'aplicado' : 'pendiente',
+    fecha,
+    sede,
+    rol,
+    sale_hemodinamista_id:sale,
+    entra_hemodinamista_id:entra,
+    fecha_devolucion,
+    sede_devolucion,
+    rol_devolucion:rol,
+    motivo,
+    creado_por:profile.id
+  };
+  const res = await db.from('cambios_guardia').insert(payload);
+  if(res.error) return alert('Error registrando cambio: ' + res.error.message);
+  $('changeDate').value=''; $('changeReturnDate').value=''; $('changeReason').value='';
+  await loadEverything(); showView('changes');
+}
+
+async function setChangeStatus(id, estado){
+  if(!isAdmin()) return alert('Solo admin.');
+  const patch = {estado};
+  const now = new Date().toISOString();
+  if(estado === 'aceptado'){ patch.aceptado_por = profile.id; patch.accepted_at = now; }
+  if(estado === 'rechazado'){ patch.rechazado_por = profile.id; patch.rejected_at = now; }
+  if(estado === 'aplicado'){ patch.aplicado_por = profile.id; patch.applied_at = now; }
+  const res = await db.from('cambios_guardia').update(patch).eq('id', id);
+  if(res.error) return alert(res.error.message);
+  await loadEverything(); showView('changes');
+}
+window.setChangeStatus = setChangeStatus;
+
+async function deleteTbo(id){
+  if(!isAdmin()) return alert('Solo admin.');
+  if(!confirm('¿Eliminar esta guardia de Tacuarembó?')) return;
+  const res = await db.from('guardias_tacuarembo').update({activo:false}).eq('id', id);
+  if(res.error) return alert(res.error.message);
+  await loadEverything(); showView('tbo');
+}
+window.deleteTbo = deleteTbo;
+
+function render(){
+  renderSelects();
+  renderFixed();
+  buildSchedule();
+  renderCalendar();
+  renderMetrics();
+  renderAlerts();
+  renderDoctors();
+  renderTbo();
+  renderChanges();
+  renderReport();
+  renderAudit();
+  showView(currentView);
+}
+
+function renderSelects(){
+  $('tboDoc').innerHTML = doctorOptions($('tboDoc').value, false, 'any', true);
+  $('changeFrom').innerHTML = doctorOptions($('changeFrom').value, true, 'any', true);
+  $('changeTo').innerHTML = doctorOptions($('changeTo').value, false, 'any', true);
+}
+
+function renderFixed(){
+  $('fixedBox').innerHTML = weekdays.map(w => {
+    const f = fixed.find(x => x.dia_semana === w.n);
+    return `<div class="notice"><strong>Guardia ${w.n} · ${w.label}</strong>
+      <div class="row" style="margin-top:8px">
+        <div><label>Primer operador</label><select ${isAdmin()?'':'disabled'} onchange="updateFixed(${w.n}, 'first', this.value)">${doctorOptions(f?.primer_operador_id || '', false, 'first', false)}</select></div>
+        <div><label>Segundo operador</label><select ${isAdmin()?'':'disabled'} onchange="updateFixed(${w.n}, 'second', this.value)">${doctorOptions(f?.segundo_operador_id || '', true, 'second', false)}</select></div>
+      </div></div>`;
+  }).join('');
+}
+
+function weekendDoctor(date){
+  const rotation = fixed.slice().sort((a,b)=>a.numero_guardia-b.numero_guardia).map(x => docById(x.primer_operador_id)).filter(Boolean);
+  if(!rotation.length || !config?.fecha_inicio_ciclo_fds) return null;
+  const cycle = new Date(config.fecha_inicio_ciclo_fds + 'T00:00:00');
+  const d = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  const diff = Math.floor((d-cycle)/86400000);
+  return rotation[mod(Math.floor(diff/7), rotation.length)] || null;
+}
+
+function buildSchedule(){
+  const [year, month] = $('month').value.split('-').map(Number);
+  const first = new Date(year, month-1, 1);
+  const last = new Date(year, month, 0);
+  schedule = [];
+  conflicts = [];
+
+  for(let d = new Date(first); d <= last; d.setDate(d.getDate()+1)){
+    const iso = todayISO(d);
+    const js = d.getDay();
+    let mv;
+    if(js >= 1 && js <= 5){
+      const f = fixed.find(x => x.dia_semana === js);
+      mv = {type:'Guardia ' + js, firstId:f?.primer_operador_id || '', secondId:f?.segundo_operador_id || '', first:docName(f?.primer_operador_id), second:docName(f?.segundo_operador_id), source:'Fija semanal'};
+    }else{
+      const wd = weekendDoctor(d);
+      mv = {type:'FDS rotatorio', firstId:wd?.id || '', secondId:'', first:wd?.nombre || '', second:'', source:'Rotación lunes-viernes'};
+    }
+    const tboDay = tbo.filter(x => x.fecha_desde <= iso && x.fecha_hasta >= iso).map(x => ({...x}));
+    schedule.push({date:iso, dayName:dayName(js), dayNumber:d.getDate(), weekend:js===0||js===6, mv, tbo:tboDay, changes:[]});
+  }
+
+  applyChanges();
+  detectConflicts();
+}
+
+function applyChanges(){
+  const applicable = changes.filter(c => c.estado === 'aceptado' || c.estado === 'aplicado');
+  applicable.forEach(ch => {
+    applySingleChange(ch, false);
+    if(ch.tipo === 'permuta' && ch.fecha_devolucion && ch.sale_hemodinamista_id){
+      applySingleChange({
+        ...ch,
+        fecha:ch.fecha_devolucion,
+        sede:ch.sede_devolucion || ch.sede,
+        sale_hemodinamista_id:ch.entra_hemodinamista_id,
+        entra_hemodinamista_id:ch.sale_hemodinamista_id
+      }, true);
+    }
+  });
+}
+
+function applySingleChange(ch, reverse){
+  const item = schedule.find(x => x.date === ch.fecha);
+  if(!item) return;
+  const entrant = docById(ch.entra_hemodinamista_id);
+  if(!entrant) return;
+  if(ch.sede === 'montevideo'){
+    if(ch.rol === 'primer_operador'){
+      if(!ch.sale_hemodinamista_id || item.mv.firstId === ch.sale_hemodinamista_id){ item.mv.firstId = entrant.id; item.mv.first = entrant.nombre; item.mv.source = reverse ? 'Devolución permuta' : 'Cambio aplicado'; }
+    }
+    if(ch.rol === 'segundo_operador'){
+      if(!ch.sale_hemodinamista_id || item.mv.secondId === ch.sale_hemodinamista_id){ item.mv.secondId = entrant.id; item.mv.second = entrant.nombre; item.mv.source = reverse ? 'Devolución permuta' : 'Cambio aplicado'; }
+    }
+  }else{
+    item.tbo = item.tbo.map(t => {
+      if(!ch.sale_hemodinamista_id || t.hemodinamista_id === ch.sale_hemodinamista_id){
+        return {...t, hemodinamista_id:entrant.id, observacion:[t.observacion, reverse?'Devolución permuta':'Cambio aplicado'].filter(Boolean).join(' | ')};
+      }
+      return t;
+    });
+  }
+  item.changes.push(ch);
+}
+
+function detectConflicts(){
+  schedule.forEach(item => {
+    if(!item.mv.firstId) conflicts.push({date:item.date,msg:'Montevideo sin primer operador'});
+    const mvIds = [item.mv.firstId, item.mv.secondId].filter(Boolean);
+    item.tbo.forEach(x => { if(mvIds.includes(x.hemodinamista_id)) conflicts.push({date:item.date,msg:docName(x.hemodinamista_id)+' está en Montevideo y Tacuarembó'}); });
+  });
+}
+
+function renderCalendar(){
+  const [year, month] = $('month').value.split('-').map(Number);
+  const first = new Date(year, month-1, 1);
+  const offset = (first.getDay()+6)%7;
+  const blanks = Array.from({length:offset},()=>'<div class="day blank"></div>').join('');
+  const days = schedule.map(item => {
+    const bad = conflicts.some(c => c.date === item.date);
+    const tboHtml = item.tbo.map(x => `<div class="asg tbo ${bad?'bad':''}"><strong>TBO · ${roleLabel(x.rol)}</strong>${html(docName(x.hemodinamista_id))}${x.observacion?'<br>'+html(x.observacion):''}</div>`).join('');
+    return `<div class="day ${item.weekend?'weekend':''} ${bad?'conflict':''}"><div class="daynum"><span>${item.dayNumber}</span>${item.weekend?'<span class="pill info">FDS</span>':''}</div><div class="asg mv ${bad?'bad':''}"><strong>MV · ${html(item.mv.type)}</strong>1º: ${item.mv.first?html(item.mv.first):'<b style="color:#b91c1c">VACÍO</b>'}<br>2º: ${item.mv.second?html(item.mv.second):'<span style="color:#b45309">vacío</span>'}</div>${tboHtml}${item.changes.length?'<div class="small">Cambios: '+item.changes.length+'</div>':''}</div>`;
+  }).join('');
+  $('calendar').innerHTML = blanks + days;
+  $('title').textContent = 'Calendario mensual · ' + $('month').value;
+}
+
+function renderMetrics(){
+  const tboCount = schedule.reduce((a,x)=>a+x.tbo.length,0);
+  const pending = changes.filter(c => c.estado === 'pendiente').length;
+  $('metrics').innerHTML = `<div class="metric"><strong>${schedule.length}</strong><span>Días MV</span></div><div class="metric"><strong>${schedule.filter(x=>x.weekend).length}</strong><span>Días FDS</span></div><div class="metric"><strong>${tboCount}</strong><span>Asignaciones TBO</span></div><div class="metric"><strong>${conflicts.length}</strong><span>Conflictos · ${pending} pendientes</span></div>`;
+}
+
+function renderAlerts(){
+  const pending = changes.filter(c => c.estado === 'pendiente');
+  const parts = [];
+  if(conflicts.length) parts.push(`<div class="notice danger"><strong>${conflicts.length} conflicto(s)</strong>\n${conflicts.map(c=>c.date+': '+c.msg).join('\n')}</div>`);
+  if(pending.length) parts.push(`<div class="notice warn"><strong>${pending.length} cambio(s) pendiente(s) de aceptar.</strong></div>`);
+  if(!parts.length) parts.push('<div class="notice ok"><strong>Sin conflictos y sin cambios pendientes.</strong></div>');
+  $('alerts').innerHTML = parts.join('');
+}
+
+function renderDoctors(){
+  $('doctorsTable').innerHTML = `<table><thead><tr><th>Nombre</th><th>Email</th><th>Activo</th><th>1º</th><th>2º</th><th>Suplente</th></tr></thead><tbody>${doctors.map(d=>`<tr><td>${html(d.nombre)}</td><td>${html(d.email||'')}</td><td>${d.activo?'sí':'no'}</td><td>${d.puede_ser_primer_operador?'sí':'no'}</td><td>${d.puede_ser_segundo_operador?'sí':'no'}</td><td>${d.suplente_sin_guardia_fija?'sí':'no'}</td></tr>`).join('')}</tbody></table>`;
+}
+
+function renderTbo(){
+  $('tboTable').innerHTML = tbo.length ? `<table><thead><tr><th>Desde</th><th>Hasta</th><th>Hemodinamista</th><th>Rol</th><th>Obs.</th><th></th></tr></thead><tbody>${tbo.map(x=>`<tr><td>${x.fecha_desde}</td><td>${x.fecha_hasta}</td><td>${html(docName(x.hemodinamista_id))}</td><td>${roleLabel(x.rol)}</td><td>${html(x.observacion||'')}</td><td>${isAdmin()?`<button class="danger" type="button" onclick="deleteTbo('${x.id}')">Eliminar</button>`:''}</td></tr>`).join('')}</tbody></table>` : '<div class="notice warn">No hay guardias de Tacuarembó cargadas.</div>';
+}
+
+function renderChanges(){
+  $('changesTable').innerHTML = changes.length ? `<table><thead><tr><th>Fecha</th><th>Tipo</th><th>Sede</th><th>Rol</th><th>Sale</th><th>Entra</th><th>Estado</th><th>Motivo</th><th></th></tr></thead><tbody>${changes.map(c=>`<tr><td>${c.fecha}${c.fecha_devolucion?'<br><span class="small">Devuelve: '+c.fecha_devolucion+'</span>':''}</td><td>${typeLabel(c.tipo)}</td><td>${siteLabel(c.sede)}</td><td>${roleLabel(c.rol)}</td><td>${html(docName(c.sale_hemodinamista_id)||'—')}</td><td>${html(docName(c.entra_hemodinamista_id))}</td><td><span class="pill ${statusClass(c.estado)}">${html(c.estado)}</span></td><td>${html(c.motivo||'')}</td><td>${isAdmin()?changeButtons(c):''}</td></tr>`).join('')}</tbody></table>` : '<div class="notice warn">No hay cambios registrados.</div>';
+}
+
+function changeButtons(c){
+  if(c.estado === 'pendiente') return `<button type="button" onclick="setChangeStatus('${c.id}','aceptado')">Aceptar</button> <button type="button" onclick="setChangeStatus('${c.id}','rechazado')">Rechazar</button>`;
+  if(c.estado === 'aceptado') return `<button type="button" onclick="setChangeStatus('${c.id}','aplicado')">Marcar aplicado</button>`;
+  return '';
+}
+
+function renderReport(){
+  const counts = {};
+  doctors.forEach(d => counts[d.nombre] = {mvWeek1:0,mvFds1:0,mv2:0,tbo1:0,tbo2:0});
+  const ensure = n => { if(!counts[n]) counts[n] = {mvWeek1:0,mvFds1:0,mv2:0,tbo1:0,tbo2:0}; };
+  schedule.forEach(item => {
+    if(item.mv.first){ ensure(item.mv.first); if(item.weekend) counts[item.mv.first].mvFds1++; else counts[item.mv.first].mvWeek1++; }
+    if(item.mv.second){ ensure(item.mv.second); counts[item.mv.second].mv2++; }
+    item.tbo.forEach(x => { const n = docName(x.hemodinamista_id); if(n){ ensure(n); if(x.rol === 'primer_operador') counts[n].tbo1++; else if(x.rol === 'segundo_operador') counts[n].tbo2++; } });
+  });
+  $('reportTable').innerHTML = `<div class="notice warn">Montevideo y Tacuarembó se mantienen separados porque tienen régimen de pago distinto. No hay total global mezclado.</div><table><thead><tr><th>Hemodinamista</th><th>MV 1º hábil</th><th>MV 1º FDS</th><th>MV 2º</th><th>TBO 1º</th><th>TBO 2º</th></tr></thead><tbody>${Object.entries(counts).sort((a,b)=>a[0].localeCompare(b[0])).map(([n,c])=>`<tr><td><strong>${html(n)}</strong></td><td>${c.mvWeek1}</td><td>${c.mvFds1}</td><td>${c.mv2}</td><td>${c.tbo1}</td><td>${c.tbo2}</td></tr>`).join('')}</tbody></table>`;
+}
+
+function renderAudit(){
+  $('auditTable').innerHTML = audit.length ? `<table><thead><tr><th>Fecha/hora</th><th>Acción</th><th>Tabla</th><th>Usuario app</th><th>Registro</th></tr></thead><tbody>${audit.map(a=>`<tr><td>${new Date(a.created_at).toLocaleString()}</td><td>${html(a.accion)}</td><td>${html(a.tabla_afectada)}</td><td class="small">${html(a.usuario_app_id||'')}</td><td class="small">${html(a.registro_id||'')}</td></tr>`).join('')}</tbody></table>` : '<div class="notice warn">No hay auditoría visible o no se pudo leer.</div>';
+}
+
+function showView(view){
+  currentView = view;
+  ['Calendar','Doctors','Tbo','Changes','Report','Audit'].forEach(v => $('view'+v).classList.add('hidden'));
+  ['showCalendarBtn','showDoctorsBtn','showTboBtn','showChangesBtn','showReportBtn','showAuditBtn'].forEach(id => $(id).classList.remove('active'));
+  if(view==='calendar'){ $('viewCalendar').classList.remove('hidden'); $('showCalendarBtn').classList.add('active'); $('title').textContent='Calendario mensual · '+$('month').value; }
+  if(view==='doctors'){ $('viewDoctors').classList.remove('hidden'); $('showDoctorsBtn').classList.add('active'); $('title').textContent='Hemodinamistas'; }
+  if(view==='tbo'){ $('viewTbo').classList.remove('hidden'); $('showTboBtn').classList.add('active'); $('title').textContent='Tacuarembó'; }
+  if(view==='changes'){ $('viewChanges').classList.remove('hidden'); $('showChangesBtn').classList.add('active'); $('title').textContent='Cambios de guardia'; }
+  if(view==='report'){ $('viewReport').classList.remove('hidden'); $('showReportBtn').classList.add('active'); $('title').textContent='Reporte mensual'; }
+  if(view==='audit'){ $('viewAudit').classList.remove('hidden'); $('showAuditBtn').classList.add('active'); $('title').textContent='Auditoría'; }
+}
+
+function exportPaymentsCsv(){
+  const rows = [['Hemodinamista','MV 1º hábil','MV 1º FDS','MV 2º','TBO 1º','TBO 2º']];
+  const counts = {};
+  doctors.forEach(d => counts[d.nombre] = {mvWeek1:0,mvFds1:0,mv2:0,tbo1:0,tbo2:0});
+  const ensure = n => { if(!counts[n]) counts[n] = {mvWeek1:0,mvFds1:0,mv2:0,tbo1:0,tbo2:0}; };
+  schedule.forEach(item => {
+    if(item.mv.first){ ensure(item.mv.first); if(item.weekend) counts[item.mv.first].mvFds1++; else counts[item.mv.first].mvWeek1++; }
+    if(item.mv.second){ ensure(item.mv.second); counts[item.mv.second].mv2++; }
+    item.tbo.forEach(x => { const n = docName(x.hemodinamista_id); if(n){ ensure(n); if(x.rol === 'primer_operador') counts[n].tbo1++; else if(x.rol === 'segundo_operador') counts[n].tbo2++; } });
+  });
+  Object.entries(counts).sort((a,b)=>a[0].localeCompare(b[0])).forEach(([n,c]) => rows.push([n,c.mvWeek1,c.mvFds1,c.mv2,c.tbo1,c.tbo2]));
+  const content = rows.map(r => r.map(csv).join(',')).join('\n');
+  const blob = new Blob([content], {type:'text/csv;charset=utf-8;'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'reporte_guardias_' + $('month').value + '.csv';
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+</script>
+</body>
+</html>
